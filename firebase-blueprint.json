@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "User": {
+      "collection": "users",
+      "path": "users/{userId}",
+      "fields": {
+        "userId": { "type": "string", "required": true },
+        "displayName": { "type": "string", "required": true },
+        "email": { "type": "string", "required": true },
+        "timezone": { "type": "string", "required": false },
+        "notificationsEnabled": { "type": "boolean", "required": false },
+        "soundEnabled": { "type": "boolean", "required": false },
+        "vibrateEnabled": { "type": "boolean", "required": false },
+        "defaultReminderMinutes": { "type": "number", "required": false },
+        "workStartHour": { "type": "number", "required": false },
+        "workEndHour": { "type": "number", "required": false },
+        "themeMode": { "type": "string", "required": false },
+        "createdAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "Task": {
+      "collection": "tasks",
+      "path": "users/{userId}/tasks/{taskId}",
+      "fields": {
+        "taskId": { "type": "string", "required": true },
+        "userId": { "type": "string", "required": true },
+        "title": { "type": "string", "required": true },
+        "description": { "type": "string", "required": false },
+        "category": { "type": "string", "required": true },
+        "priority": { "type": "string", "required": true },
+        "status": { "type": "string", "required": true },
+        "dueDateTime": { "type": "number", "required": true },
+        "estimatedDurationMinutes": { "type": "number", "required": false },
+        "recurrenceRule": { "type": "string", "required": false },
+        "reminderMinutesBefore": { "type": "number", "required": false },
+        "createdAt": { "type": "timestamp", "required": true },
+        "updatedAt": { "type": "timestamp", "required": true },
+        "completedAt": { "type": "timestamp", "required": false }
+      }
+    },
+    "Reminder": {
+      "collection": "reminders",
+      "path": "users/{userId}/reminders/{reminderId}",
+      "fields": {
+        "reminderId": { "type": "string", "required": true },
+        "userId": { "type": "string", "required": true },
+        "taskId": { "type": "string", "required": true },
+        "scheduledAt": { "type": "number", "required": true },
+        "reminderType": { "type": "string", "required": true },
+        "status": { "type": "string", "required": true },
+        "notificationId": { "type": "number", "required": true }
+      }
+    },
+    "DailyPlan": {
+      "collection": "daily_plans",
+      "path": "users/{userId}/daily_plans/{planId}",
+      "fields": {
+        "planId": { "type": "string", "required": true },
+        "userId": { "type": "string", "required": true },
+        "dateString": { "type": "string", "required": true },
+        "scheduleJson": { "type": "string", "required": true },
+        "summary": { "type": "string", "required": true },
+        "createdAt": { "type": "timestamp", "required": true }
+      }
+    },
+    "ProductivityLog": {
+      "collection": "productivity_logs",
+      "path": "users/{userId}/productivity_logs/{logId}",
+      "fields": {
+        "logId": { "type": "string", "required": true },
+        "userId": { "type": "string", "required": true },
+        "taskId": { "type": "string", "required": true },
+        "taskTitle": { "type": "string", "required": true },
+        "action": { "type": "string", "required": true },
+        "timestamp": { "type": "timestamp", "required": true }
+      }
+    }
+  }
+}

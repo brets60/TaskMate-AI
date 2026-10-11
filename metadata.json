@@ -1,0 +1,6 @@
+{
+  "name": "TaskMate AI",
+  "description": "AI-Powered Smart Task Reminder & Productivity Assistant with intelligent scheduling and real reminders.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
