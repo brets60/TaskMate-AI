@@ -148,6 +148,67 @@ object FirebaseAuthManager {
     }
 
     /**
+     * Email and Password Registration with Firebase Auth.
+     */
+    fun registerWithEmail(
+        email: String,
+        password: String,
+        displayName: String,
+        onSuccess: (FirebaseUser) -> Unit,
+        onError: (String) -> Unit,
+        scope: CoroutineScope
+    ) {
+        scope.launch {
+            try {
+                val result = getAuth().createUserWithEmailAndPassword(email.trim(), password).await()
+                val user = result.user
+                if (user != null) {
+                    if (displayName.isNotBlank()) {
+                        val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                            .setDisplayName(displayName.trim())
+                            .build()
+                        user.updateProfile(profileUpdates).await()
+                    }
+                    Log.d(TAG, "Successfully registered user: ${user.uid} (${user.email})")
+                    onSuccess(user)
+                } else {
+                    onError("User registration returned empty user profile")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Registration failed", e)
+                onError(e.localizedMessage ?: "Registration failed")
+            }
+        }
+    }
+
+    /**
+     * Email and Password Sign In with Firebase Auth.
+     */
+    fun signInWithEmail(
+        email: String,
+        password: String,
+        onSuccess: (FirebaseUser) -> Unit,
+        onError: (String) -> Unit,
+        scope: CoroutineScope
+    ) {
+        scope.launch {
+            try {
+                val result = getAuth().signInWithEmailAndPassword(email.trim(), password).await()
+                val user = result.user
+                if (user != null) {
+                    Log.d(TAG, "Successfully signed in user: ${user.uid} (${user.email})")
+                    onSuccess(user)
+                } else {
+                    onError("Sign in returned empty user profile")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Sign in failed", e)
+                onError(e.localizedMessage ?: "Sign in failed")
+            }
+        }
+    }
+
+    /**
      * Sign out of Firebase and clear Credential Manager state.
      */
     fun signOut(
@@ -168,3 +229,4 @@ object FirebaseAuthManager {
         }
     }
 }
+

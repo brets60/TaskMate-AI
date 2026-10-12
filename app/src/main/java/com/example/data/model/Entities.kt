@@ -2,6 +2,7 @@ package com.example.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Ignore
 import java.util.UUID
 
 enum class TaskPriority(val title: String, val level: Int) {
@@ -72,6 +73,7 @@ enum class ReminderOffset(val title: String, val minutesBefore: Int) {
     }
 }
 
+
 @Entity(tableName = "tasks")
 data class TaskEntity(
     @PrimaryKey
@@ -79,17 +81,49 @@ data class TaskEntity(
     val userId: String = "user_default",
     val title: String,
     val description: String = "",
+    val dueDate: Long = System.currentTimeMillis(),
+    val isCompleted: Boolean = false,
     val category: String = TaskCategory.GENERAL.name,
     val priority: String = TaskPriority.MEDIUM.name,
-    val status: String = TaskStatus.PENDING.name,
-    val dueDateTime: Long,
+    val status: String = if (isCompleted) TaskStatus.COMPLETED.name else TaskStatus.PENDING.name,
+    val completionStatus: String = status,
+    val dueDateTime: Long = dueDate,
     val estimatedDurationMinutes: Int = 30,
     val recurrenceRule: String = RecurrenceRule.NONE.name,
     val reminderMinutesBefore: Int = 10,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val completedAt: Long? = null
-)
+    val completedAt: Long? = if (isCompleted) System.currentTimeMillis() else null
+) {
+    @Ignore
+    constructor(
+        title: String,
+        description: String = "",
+        dueDate: Long = System.currentTimeMillis(),
+        isCompleted: Boolean = false
+    ) : this(
+        taskId = UUID.randomUUID().toString(),
+        userId = "user_default",
+        title = title,
+        description = description,
+        dueDate = dueDate,
+        isCompleted = isCompleted,
+        category = TaskCategory.GENERAL.name,
+        priority = TaskPriority.MEDIUM.name,
+        status = if (isCompleted) TaskStatus.COMPLETED.name else TaskStatus.PENDING.name,
+        completionStatus = if (isCompleted) TaskStatus.COMPLETED.name else TaskStatus.PENDING.name,
+        dueDateTime = dueDate,
+        estimatedDurationMinutes = 30,
+        recurrenceRule = RecurrenceRule.NONE.name,
+        reminderMinutesBefore = 10,
+        createdAt = System.currentTimeMillis(),
+        updatedAt = System.currentTimeMillis(),
+        completedAt = if (isCompleted) System.currentTimeMillis() else null
+    )
+}
+
+typealias LocalTask = TaskEntity
+
 
 @Entity(tableName = "reminders")
 data class ReminderEntity(

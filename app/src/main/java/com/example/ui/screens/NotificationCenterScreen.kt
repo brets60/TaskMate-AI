@@ -169,6 +169,8 @@ fun NotificationCenterScreen(
                                 taskId = "demo_test_task",
                                 title = "Review Project Deliverables",
                                 description = "Heads-up reminder with interactive actions.",
+                                dueDate = System.currentTimeMillis() + 600000,
+                                isCompleted = false,
                                 dueDateTime = System.currentTimeMillis() + 600000
                             )
                             NotificationHelper.showTaskReminderNotification(

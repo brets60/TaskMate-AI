@@ -27,8 +27,10 @@ import com.example.data.model.TaskPriority
 import com.example.data.model.TaskStatus
 import com.example.ui.Screen
 import com.example.ui.TaskMateViewModel
+import com.example.ui.components.SwipeToDismissTaskItem
 import com.example.ui.components.TaskItemCard
 import com.example.ui.theme.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,6 +43,8 @@ fun HomeScreen(
     val user by viewModel.currentUser.collectAsState()
     val allTasks by viewModel.allTasks.collectAsState()
     val stats by viewModel.productivityStats.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     var selectedQuickFilter by remember { mutableStateOf("TODAY") }
 
@@ -85,6 +89,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -125,6 +130,13 @@ fun HomeScreen(
                         modifier = Modifier.testTag("stats_header_button")
                     ) {
                         Icon(Icons.Outlined.BarChart, contentDescription = "Productivity Insights", tint = TextPrimaryLight)
+                    }
+
+                    IconButton(
+                        onClick = { viewModel.navigateTo(Screen.Auth) },
+                        modifier = Modifier.testTag("auth_header_button")
+                    ) {
+                        Icon(Icons.Outlined.AccountCircle, contentDescription = "Account & Security", tint = PrimaryBlue)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -368,55 +380,89 @@ fun HomeScreen(
             if (displayedTasks.isEmpty()) {
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("empty_state_card"),
+                        shape = RoundedCornerShape(18.dp),
                         colors = CardDefaults.cardColors(containerColor = SurfaceLight),
                         border = BorderStroke(1.dp, BorderLight)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(28.dp),
+                                .padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = PastelMintBg,
-                                modifier = Modifier.size(54.dp)
+                                color = PastelBlueBg,
+                                modifier = Modifier.size(58.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        imageVector = Icons.Default.CheckCircle,
+                                        imageVector = Icons.Default.AddTask,
                                         contentDescription = null,
-                                        tint = AccentEmerald,
-                                        modifier = Modifier.size(28.dp)
+                                        tint = PrimaryBlue,
+                                        modifier = Modifier.size(30.dp)
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
                             Text(
-                                text = "All caught up!",
+                                text = if (allTasks.isEmpty()) "No Tasks Yet" else "All Caught Up!",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimaryLight
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "No tasks matching this filter. Tap + below to add a task.",
+                                text = if (allTasks.isEmpty()) {
+                                    "Your task list is empty. Tap the button below to add your very first task or schedule."
+                                } else {
+                                    "No tasks matching this filter. Switch filters or create a new task."
+                                },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondaryLight
+                                color = TextSecondaryLight,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = { viewModel.openEditTask(null) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Create First Task", fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                 }
             } else {
                 items(displayedTasks, key = { it.taskId }) { task ->
-                    TaskItemCard(
+                    SwipeToDismissTaskItem(
                         task = task,
-                        onToggleComplete = { viewModel.toggleTaskComplete(task) },
-                        onClick = { viewModel.openTaskDetail(task.taskId) },
-                        onDelete = { viewModel.deleteTask(task.taskId) }
-                    )
+                        onDelete = {
+                            viewModel.deleteTask(task.taskId)
+                            coroutineScope.launch {
+                                val result = snackbarHostState.showSnackbar(
+                                    message = "\"${task.title}\" deleted",
+                                    actionLabel = "Undo",
+                                    duration = SnackbarDuration.Short
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    viewModel.restoreTask(task)
+                                }
+                            }
+                        }
+                    ) {
+                        TaskItemCard(
+                            task = task,
+                            onToggleComplete = { viewModel.toggleTaskComplete(task) },
+                            onClick = { viewModel.openTaskDetail(task.taskId) },
+                            onDelete = { viewModel.deleteTask(task.taskId) }
+                        )
+                    }
                 }
             }
 

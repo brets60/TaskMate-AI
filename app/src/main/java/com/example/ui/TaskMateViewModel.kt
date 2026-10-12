@@ -88,8 +88,10 @@ class TaskMateViewModel(application: Application) : AndroidViewModel(application
     )
     val generatedTracks: StateFlow<List<FocusTrack>> = _generatedTracks.asStateFlow()
 
-    // Navigation State
-    private val _currentScreen = MutableStateFlow<Screen>(Screen.Home)
+    // Navigation State - Users must register / authenticate first
+    private val _currentScreen = MutableStateFlow<Screen>(
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser != null) Screen.Home else Screen.Auth
+    )
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
 
     private val screenBackStack = mutableListOf<Screen>()
@@ -160,6 +162,7 @@ class TaskMateViewModel(application: Application) : AndroidViewModel(application
         val pending = tasks.count { it.status != TaskStatus.COMPLETED.name }
         val overdue = tasks.count { it.status != TaskStatus.COMPLETED.name && it.dueDateTime < now }
         val rate = if (tasks.isNotEmpty()) (completed.toFloat() / tasks.size) else 0f
+        val streak = if (completed > 0) 1 else 0
 
         ProductivityStats(
             totalTasks = tasks.size,
@@ -167,8 +170,8 @@ class TaskMateViewModel(application: Application) : AndroidViewModel(application
             pendingTasks = pending,
             overdueTasks = overdue,
             completionRate = rate,
-            currentStreakDays = 5,
-            weeklyCompleted = completed + 3
+            currentStreakDays = streak,
+            weeklyCompleted = completed
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProductivityStats())
 
@@ -177,7 +180,7 @@ class TaskMateViewModel(application: Application) : AndroidViewModel(application
         listOf(
             AiChatMessage(
                 isUser = false,
-                text = "Hello Alex! I'm TaskMate AI, your intelligent productivity partner. Tell me what you'd like to schedule, ask me to plan your day, or ask which task to focus on first."
+                text = "Welcome to TaskMate! I'm here to help you organize your tasks, plan your daily schedule, and stay focused. Tap '+' to create your first task, or ask me anything!"
             )
         )
     )
@@ -205,15 +208,27 @@ class TaskMateViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun navigateBack(): Boolean {
+        val isAuthenticated = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser != null
         if (screenBackStack.isNotEmpty()) {
-            _currentScreen.value = screenBackStack.removeAt(screenBackStack.size - 1)
+            val prev = screenBackStack.removeAt(screenBackStack.size - 1)
+            // If user is not authenticated, they should not be popped back into main screens
+            if (!isAuthenticated && prev != Screen.Auth) {
+                _currentScreen.value = Screen.Auth
+                return true
+            }
+            _currentScreen.value = prev
             return true
         }
-        if (_currentScreen.value != Screen.Home) {
-            _currentScreen.value = Screen.Home
+        val fallback = if (isAuthenticated) Screen.Home else Screen.Auth
+        if (_currentScreen.value != fallback) {
+            _currentScreen.value = fallback
             return true
         }
         return false
+    }
+
+    fun clearBackStack() {
+        screenBackStack.clear()
     }
 
     fun openTaskDetail(taskId: String) {
@@ -258,6 +273,12 @@ class TaskMateViewModel(application: Application) : AndroidViewModel(application
                 _selectedTaskId.value = null
                 navigateBack()
             }
+        }
+    }
+
+    fun restoreTask(task: TaskEntity) {
+        viewModelScope.launch {
+            repository.insertTask(task)
         }
     }
 
@@ -314,6 +335,8 @@ class TaskMateViewModel(application: Application) : AndroidViewModel(application
             val newTask = TaskEntity(
                 title = parsed.title,
                 description = parsed.description,
+                dueDate = parsed.dueDateTimeMillis,
+                isCompleted = false,
                 category = parsed.category.name,
                 priority = parsed.priority.name,
                 dueDateTime = parsed.dueDateTimeMillis,

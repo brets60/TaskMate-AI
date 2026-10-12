@@ -101,6 +101,129 @@ fun CategoryBadge(category: TaskCategory, modifier: Modifier = Modifier) {
     }
 }
 
+@Composable
+fun StatusBadge(status: String, modifier: Modifier = Modifier) {
+    val taskStatus = TaskStatus.fromString(status)
+    val (label, color, bg, icon) = when (taskStatus) {
+        TaskStatus.COMPLETED -> listOf(
+            "Completed",
+            AccentEmerald,
+            PastelMintBg,
+            Icons.Default.CheckCircle
+        )
+        TaskStatus.IN_PROGRESS -> listOf(
+            "In Progress",
+            PrimaryBlueDark,
+            PastelBlueBg,
+            Icons.Default.Timelapse
+        )
+        TaskStatus.CANCELLED -> listOf(
+            "Cancelled",
+            PastelRoseText,
+            PastelRoseBg,
+            Icons.Default.Cancel
+        )
+        TaskStatus.PENDING -> listOf(
+            "Pending",
+            PastelAmberText,
+            PastelAmberBg,
+            Icons.Default.Schedule
+        )
+    }
+
+    Surface(
+        color = bg as Color,
+        shape = RoundedCornerShape(8.dp),
+        modifier = modifier.testTag("status_badge")
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+        ) {
+            Icon(
+                imageVector = icon as ImageVector,
+                contentDescription = null,
+                tint = color as Color,
+                modifier = Modifier.size(12.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = label as String,
+                color = color as Color,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.testTag("task_status_text")
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeToDismissTaskItem(
+    task: TaskEntity,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            if (dismissValue == SwipeToDismissBoxValue.EndToStart || dismissValue == SwipeToDismissBoxValue.StartToEnd) {
+                onDelete()
+                true
+            } else {
+                false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("swipe_to_dismiss_${task.taskId}"),
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val alignment = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                else -> Alignment.CenterEnd
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(PriorityUrgent)
+                    .padding(horizontal = 20.dp)
+                    .testTag("swipe_delete_background_${task.taskId}"),
+                contentAlignment = alignment
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete task",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Delete",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        },
+        content = {
+            content()
+        }
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskItemCard(
@@ -168,16 +291,30 @@ fun TaskItemCard(
             Spacer(modifier = Modifier.width(6.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                // Title
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    textDecoration = if (isCompleted) TextDecoration.LineThrough else TextDecoration.None,
-                    color = if (isCompleted) TextSecondaryLight else TextPrimaryLight,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                // Title and Status Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        textDecoration = if (isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                        color = if (isCompleted) TextSecondaryLight else TextPrimaryLight,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .testTag("task_title")
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    StatusBadge(
+                        status = task.status,
+                        modifier = Modifier.testTag("task_status_${task.taskId}")
+                    )
+                }
 
                 if (task.description.isNotBlank()) {
                     Spacer(modifier = Modifier.height(3.dp))

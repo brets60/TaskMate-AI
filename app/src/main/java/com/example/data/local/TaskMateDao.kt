@@ -6,8 +6,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM tasks WHERE userId = :userId ORDER BY dueDateTime ASC")
+    @Query("SELECT * FROM tasks ORDER BY dueDate ASC")
+    fun getAllTasks(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE userId = :userId ORDER BY dueDate ASC")
     fun getAllTasks(userId: String): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE taskId = :taskId")
+    suspend fun getTaskById(taskId: String): TaskEntity?
 
     @Query("SELECT * FROM tasks WHERE userId = :userId AND taskId = :taskId")
     suspend fun getTaskById(userId: String, taskId: String): TaskEntity?
@@ -15,27 +21,65 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE taskId = :taskId")
     suspend fun getTaskByIdDirect(taskId: String): TaskEntity?
 
+    @Query("SELECT * FROM tasks WHERE taskId = :taskId")
+    fun getTaskByIdFlow(taskId: String): Flow<TaskEntity?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: TaskEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(task: TaskEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(tasks: List<TaskEntity>)
 
     @Update
     suspend fun updateTask(task: TaskEntity)
 
+    @Update
+    suspend fun update(task: TaskEntity)
+
     @Delete
     suspend fun deleteTask(task: TaskEntity)
+
+    @Delete
+    suspend fun delete(task: TaskEntity)
 
     @Query("DELETE FROM tasks WHERE taskId = :taskId")
     suspend fun deleteTaskById(taskId: String)
 
-    @Query("UPDATE tasks SET status = :status, completedAt = :completedAt, updatedAt = :updatedAt WHERE taskId = :taskId")
+    @Query("DELETE FROM tasks")
+    suspend fun deleteAllTasks()
+
+    @Query("SELECT * FROM tasks WHERE isCompleted = 1 ORDER BY dueDate ASC")
+    fun getCompletedTasks(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE isCompleted = 0 ORDER BY dueDate ASC")
+    fun getPendingTasks(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND isCompleted = 1 ORDER BY dueDate ASC")
+    fun getCompletedTasks(userId: String): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND isCompleted = 0 ORDER BY dueDate ASC")
+    fun getPendingTasks(userId: String): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE isCompleted = :isCompleted ORDER BY dueDate ASC")
+    fun getTasksByCompletion(isCompleted: Boolean): Flow<List<TaskEntity>>
+
+    @Query("UPDATE tasks SET status = :status, completionStatus = :status, isCompleted = CASE WHEN :status = 'COMPLETED' THEN 1 ELSE 0 END, completedAt = :completedAt, updatedAt = :updatedAt WHERE taskId = :taskId")
     suspend fun updateTaskStatus(taskId: String, status: String, completedAt: Long?, updatedAt: Long = System.currentTimeMillis())
 
-    @Query("SELECT * FROM tasks WHERE userId = :userId AND status != 'COMPLETED' AND dueDateTime < :thresholdTime")
+    @Query("UPDATE tasks SET isCompleted = :isCompleted, status = CASE WHEN :isCompleted = 1 THEN 'COMPLETED' ELSE 'PENDING' END, completionStatus = CASE WHEN :isCompleted = 1 THEN 'COMPLETED' ELSE 'PENDING' END, completedAt = :completedAt, updatedAt = :updatedAt WHERE taskId = :taskId")
+    suspend fun updateCompletion(taskId: String, isCompleted: Boolean, completedAt: Long? = null, updatedAt: Long = System.currentTimeMillis())
+
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND isCompleted = 0 AND dueDate < :thresholdTime")
     suspend fun getOverdueTasks(userId: String, thresholdTime: Long): List<TaskEntity>
 
-    @Query("SELECT * FROM tasks WHERE userId = :userId AND dueDateTime BETWEEN :startTime AND :endTime")
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND dueDate BETWEEN :startTime AND :endTime")
     suspend fun getTasksBetween(userId: String, startTime: Long, endTime: Long): List<TaskEntity>
 }
+
+typealias TaskItemDao = TaskDao
 
 @Dao
 interface ReminderDao {

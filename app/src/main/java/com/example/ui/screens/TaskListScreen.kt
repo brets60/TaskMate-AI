@@ -19,25 +19,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.TaskCategory
 import com.example.ui.Screen
 import com.example.ui.TaskMateViewModel
+import com.example.ui.components.SwipeToDismissTaskItem
 import com.example.ui.components.TaskItemCard
 import com.example.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
-    viewModel: TaskMateViewModel,
+    viewModel: TaskMateViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
     val filterState by viewModel.filterState.collectAsState()
     val tasks by viewModel.filteredTasks.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     var showSortMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -289,18 +295,113 @@ fun TaskListScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("task_list"),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
                     items(tasks, key = { it.taskId }) { task ->
-                        TaskItemCard(
+                        SwipeToDismissTaskItem(
                             task = task,
-                            onToggleComplete = { viewModel.toggleTaskComplete(task) },
-                            onClick = { viewModel.openTaskDetail(task.taskId) },
-                            onDelete = { viewModel.deleteTask(task.taskId) }
-                        )
+                            onDelete = {
+                                viewModel.deleteTask(task.taskId)
+                                coroutineScope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = "\"${task.title}\" deleted",
+                                        actionLabel = "Undo",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.restoreTask(task)
+                                    }
+                                }
+                            }
+                        ) {
+                            TaskItemCard(
+                                task = task,
+                                onToggleComplete = { viewModel.toggleTaskComplete(task) },
+                                onClick = { viewModel.openTaskDetail(task.taskId) },
+                                onDelete = { viewModel.deleteTask(task.taskId) }
+                            )
+                        }
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Stateless scrollable task list displaying tasks with title and status for each.
+ */
+@Composable
+fun TaskListScreen(
+    tasks: List<com.example.data.model.TaskEntity>,
+    onToggleComplete: (com.example.data.model.TaskEntity) -> Unit = {},
+    onClick: (com.example.data.model.TaskEntity) -> Unit = {},
+    onDelete: (com.example.data.model.TaskEntity) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    if (tasks.isEmpty()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceLight),
+                border = BorderStroke(1.dp, BorderLight),
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Checklist,
+                        contentDescription = null,
+                        tint = PrimaryBlue,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "No Tasks Found",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryLight
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Your task list is empty.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondaryLight
+                    )
+                }
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .testTag("task_list")
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(vertical = 16.dp)
+        ) {
+            items(tasks, key = { it.taskId }) { task ->
+                SwipeToDismissTaskItem(
+                    task = task,
+                    onDelete = { onDelete(task) }
+                ) {
+                    TaskItemCard(
+                        task = task,
+                        onToggleComplete = { onToggleComplete(task) },
+                        onClick = { onClick(task) },
+                        onDelete = { onDelete(task) }
+                    )
                 }
             }
         }

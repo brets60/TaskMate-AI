@@ -411,6 +411,8 @@ fun CreateEditTaskScreen(
                             userId = existingTask?.userId ?: "user_default",
                             title = title.trim(),
                             description = description.trim(),
+                            dueDate = dueDateTime,
+                            isCompleted = existingTask?.isCompleted ?: (existingTask?.status == TaskStatus.COMPLETED.name),
                             category = category.name,
                             priority = priority.name,
                             status = existingTask?.status ?: TaskStatus.PENDING.name,

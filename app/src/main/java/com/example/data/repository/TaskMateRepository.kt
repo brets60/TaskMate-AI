@@ -175,6 +175,12 @@ class TaskMateRepository(
     suspend fun getCompletedCountSince(userId: String, sinceTimestamp: Long): Int =
         logDao.getCompletedCountSince(userId, sinceTimestamp)
 
+    suspend fun insert(task: TaskEntity): String = insertTask(task)
+
+    suspend fun update(task: TaskEntity) = updateTask(task)
+
+    suspend fun delete(task: TaskEntity) = deleteTask(task.taskId)
+
     fun getUser(userId: String = "user_default"): Flow<UserEntity?> =
         userDao.getUser(userId)
 
@@ -182,3 +188,6 @@ class TaskMateRepository(
         userDao.insertOrUpdateUser(user)
     }
 }
+
+typealias TaskRepository = TaskMateRepository
+

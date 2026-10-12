@@ -89,14 +89,17 @@ fun ProfileSettingsScreen(
                         .padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+
                     Surface(
                         modifier = Modifier.size(54.dp),
                         shape = CircleShape,
                         color = PastelBlueBg
                     ) {
                         Box(contentAlignment = Alignment.Center) {
+                            val name = firebaseUser?.displayName ?: user?.displayName ?: "TU"
                             Text(
-                                text = user?.displayName?.take(2)?.uppercase() ?: "AR",
+                                text = name.take(2).uppercase(),
                                 color = PastelBlueText,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
@@ -106,16 +109,15 @@ fun ProfileSettingsScreen(
 
                     Spacer(modifier = Modifier.width(14.dp))
 
-                    val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = firebaseUser?.displayName ?: user?.displayName ?: "Alex Rivera",
+                            text = firebaseUser?.displayName ?: user?.displayName ?: "TaskMate User",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryLight
                         )
                         Text(
-                            text = firebaseUser?.email ?: user?.email ?: "alex.rivera@example.com",
+                            text = firebaseUser?.email ?: user?.email?.ifEmpty { "Not signed in" } ?: "Not signed in",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondaryLight
                         )
